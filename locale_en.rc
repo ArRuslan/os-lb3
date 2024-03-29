@@ -1,0 +1,9 @@
+#include "locales.h"
+
+STRINGTABLE
+BEGIN
+    RES_NAME L"test NAME"
+    RES_FACULTY L"test FACULTY"
+    RES_GROUP L"test GROUP"
+    RES_DISC L"test DISC"
+END

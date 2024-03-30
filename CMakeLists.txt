@@ -18,3 +18,12 @@ target_sources(locale_uk PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/locale_uk.o)
 
 add_executable(lb3main main.cpp)
 add_dependencies(lb3main lb2rsa locale_en locale_uk)
+
+add_executable(checksum_gen checksum_gen.cpp)
+add_dependencies(lb2rsa checksum_gen)
+
+add_custom_command(
+        TARGET lb2rsa POST_BUILD
+        COMMAND ../gen_checksum.sh
+        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+)

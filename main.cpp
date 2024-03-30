@@ -51,6 +51,9 @@ void task1(new_RSA_t new_rsa, RSA_encrypt_t encrypt, RSA_decrypt_t decrypt) {
 void task1() {
 #ifdef __MINGW32__
     HMODULE handle = LoadLibrary("./liblb2rsa.so");
+    if(!handle)
+        return;
+
     auto new_rsa = reinterpret_cast<new_RSA_t>(GetProcAddress(handle, "new_RSA"));
     auto encrypt = reinterpret_cast<RSA_encrypt_t>(GetProcAddress(handle, "RSA_encrypt"));
     auto decrypt = reinterpret_cast<RSA_decrypt_t>(GetProcAddress(handle, "RSA_decrypt"));
@@ -97,7 +100,8 @@ void task2() {
 }
 
 int main() {
-    //task1();
+    task1();
     task2();
+
     return 0;
 }

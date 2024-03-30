@@ -2,6 +2,7 @@
 
 #include <cmath>
 #include <random>
+#include <fstream>
 
 #ifdef __MINGW32__
 #include <windows.h>
@@ -96,10 +97,10 @@ PQ gen_pq() {
 
 RSA::RSA() {
     PQ pq = gen_pq();
-    uint64_t phi_N = (uint64_t) (pq.p - 1) * (pq.q - 1);
+    uint64_t phi_N = (uint64_t)(pq.p - 1) * (pq.q - 1);
     pub_key.e = find_coprime(phi_N);
     priv_key.d = find_mod_inverse(pub_key.e, phi_N);
-    pub_key.n = priv_key.n = (uint64_t) pq.p * pq.q;
+    pub_key.n = priv_key.n = (uint64_t)pq.p * pq.q;
 }
 
 uint64_t RSA::encrypt(uint64_t data) {
@@ -111,35 +112,95 @@ uint64_t RSA::decrypt(uint64_t data) {
 }
 
 extern "C" {
-RSA *new_RSA() {
+RSA* new_RSA() {
     return new RSA();
 }
 
-uint64_t RSA_encrypt(RSA *rsa, uint64_t data) {
+uint64_t RSA_encrypt(RSA* rsa, uint64_t data) {
     return rsa->encrypt(data);
 }
 
-uint64_t RSA_decrypt(RSA *rsa, uint64_t data) {
+uint64_t RSA_decrypt(RSA* rsa, uint64_t data) {
     return rsa->decrypt(data);
 }
 }
 
-#ifdef __MINGW32__
-bool APIENTRY DllMain(HMODULE module, uint32_t call_reason, void *rsv) {
-    switch (call_reason) {
-        case DLL_PROCESS_ATTACH:
-            printf("DLL_PROCESS_ATTACH\n");
-            break;
-        case DLL_THREAD_ATTACH:
-            printf("DLL_THREAD_ATTACH\n");
-            break;
-        case DLL_THREAD_DETACH:
-            printf("DLL_THREAD_DETACH\n");
-            break;
-        case DLL_PROCESS_DETACH:
-            printf("DLL_PROCESS_DETACH\n");
-            break;
+bool read_checksum(std::ifstream& file, uint32_t* checksum_out) {
+    file.seekg(-12, std::ios::end);
+    char* keywordbuf = new char[9];
+    file.read(keywordbuf, 8);
+    keywordbuf[8] = '\0';
+    if (std::string(keywordbuf) != "checksum") {
+        delete[] keywordbuf;
+        return false;
     }
+    char* checksumBuf = new char[4];
+    file.read(checksumBuf, 4);
+    memcpy(checksum_out, checksumBuf, 4);
+    delete[] checksumBuf;
+
+    return true;
+}
+
+uint32_t get_checksum(char* buf, uint32_t size) {
+    uint32_t checksum = 0;
+    auto* u32arr = (uint32_t*)buf;
+    for (uint32_t i = 0; i < size / 4; ++i)
+        checksum += u32arr[i];
+
+    uint32_t left = size % 4;
+    if (left) {
+        buf += size;
+        uint32_t left_cs = 0;
+        memcpy(&left_cs, buf, left);
+        checksum += left_cs;
+    }
+
+    return checksum;
+}
+
+#ifdef __MINGW32__
+bool APIENTRY DllMain(HMODULE module, uint32_t call_reason, void* rsv) {
+    if (call_reason == DLL_PROCESS_ATTACH) {
+        char* dll_path = new char[1024];
+        GetModuleFileName(module, dll_path, 1023);
+
+        std::ifstream file(dll_path, std::ios::binary);
+        delete[] dll_path;
+        uint32_t checksum;
+        if (!read_checksum(file, &checksum)) {
+            printf("Checksum not found!\n");
+            file.close();
+            return false;
+        }
+        file.seekg(0, std::ios::end);
+        int file_size = (int)file.tellg() - 12;
+        char* buf = new char[file_size];
+        file.seekg(0);
+        file.read(buf, file_size);
+        if(get_checksum(buf, file_size) != checksum) {
+            printf("Checksum mismatch!\n");
+            file.close();
+            delete[] buf;
+            return false;
+        }
+        delete[] buf;
+    }
+
+    /*switch (call_reason) {
+    case DLL_PROCESS_ATTACH:
+        printf("DLL_PROCESS_ATTACH\n");
+        break;
+    case DLL_THREAD_ATTACH:
+        printf("DLL_THREAD_ATTACH\n");
+        break;
+    case DLL_THREAD_DETACH:
+        printf("DLL_THREAD_DETACH\n");
+        break;
+    case DLL_PROCESS_DETACH:
+        printf("DLL_PROCESS_DETACH\n");
+        break;
+    }*/
     return true;
 }
 #endif

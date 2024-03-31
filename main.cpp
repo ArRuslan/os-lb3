@@ -75,11 +75,11 @@ void task1() {
 }
 
 void task2() {
-    setlocale(LC_ALL, "uk_UA.utf8");
+    setlocale(LC_ALL, ".1251");
 
-    std::string locale;
+    std::string locale = "uk";
     while(locale != "uk" && locale != "en") {
-        printf("Enter locale (en/uk): ");
+        wprintf(L"Enter locale (en/uk): ");
         std::getline(std::cin, locale);
     }
 
@@ -100,7 +100,7 @@ void task2() {
 }
 
 int main() {
-    task1();
+    //task1();
     task2();
 
     return 0;
